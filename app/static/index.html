@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG Knowledge Base Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%238b5cf6"/><stop offset="1" stop-color="%233b82f6"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(%23g)"/><path d="M16 6l2.2 6.1L24.5 14l-6.3 1.9L16 22l-2.2-6.1L7.5 14l6.3-1.9z" fill="white"/></svg>'>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- ================================ Sidebar: knowledge base -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">
+          <svg viewBox="0 0 32 32" fill="none">
+            <defs>
+              <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#8b5cf6"/>
+                <stop offset="1" stop-color="#3b82f6"/>
+              </linearGradient>
+            </defs>
+            <path d="M16 5l2.6 7.4L26 15l-7.4 2.6L16 25l-2.6-7.4L6 15l7.4-2.6z" fill="url(#logoGrad)"/>
+            <circle cx="24.5" cy="7.5" r="2" fill="#8b5cf6"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Knowledge Base</h1>
+          <p>RAG Demo · powered by Ollama</p>
+        </div>
+      </div>
+
+      <div class="upload-zone" id="uploadZone" role="button" tabindex="0" aria-label="Upload files">
+        <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt,.md,.csv" hidden>
+        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 16.2A4.5 4.5 0 0 1 6.6 8a6 6 0 0 1 11.7 1.7A3.8 3.8 0 0 1 19.5 17"/>
+          <path d="M12 12v9"/><path d="m8.5 15.5 3.5-3.5 3.5 3.5"/>
+        </svg>
+        <p class="upload-title"><strong>Drop files here</strong><span> or <em>browse</em></span></p>
+        <p class="upload-hint">PDF, DOCX, TXT, MD, CSV · up to 20 MB each</p>
+        <div class="upload-progress" id="uploadProgress" hidden>
+          <span class="spinner"></span>
+          <span id="uploadStatus">Processing…</span>
+        </div>
+      </div>
+
+      <div class="kb-header">
+        <h2>Documents</h2>
+        <span class="chip" id="docCount">0</span>
+      </div>
+
+      <div class="doc-list" id="docList"></div>
+
+      <div class="empty-kb" id="emptyKb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <path d="M14 2v6h6"/>
+        </svg>
+        <p>No documents yet.<br>Your knowledge base is empty.</p>
+      </div>
+
+      <div class="sidebar-footer">
+        <span id="kbStats">0 documents · 0 chunks</span>
+        <span class="model-badge" id="modelBadge">llama3.2:1b</span>
+      </div>
+    </aside>
+
+    <!-- ================================ Main: chat -->
+    <main class="chat">
+      <div class="health-banner" id="healthBanner" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>
+          <path d="M12 9v4"/><path d="M12 17h.01"/>
+        </svg>
+        <span id="healthMessage">Ollama is not reachable.</span>
+      </div>
+
+      <header class="chat-header">
+        <div class="chat-title">
+          <h2>Chat with your documents</h2>
+          <p>Every answer is grounded in your knowledge base, with source citations</p>
+        </div>
+        <button class="btn-ghost" id="clearChat" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          Clear chat
+        </button>
+      </header>
+
+      <div class="messages" id="messages">
+        <div class="hero" id="hero">
+          <div class="hero-glow"></div>
+          <div class="hero-icon">
+            <svg viewBox="0 0 24 24" fill="none">
+              <defs>
+                <linearGradient id="heroGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b82f6"/>
+                </linearGradient>
+              </defs>
+              <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" fill="url(#heroGrad)"/>
+              <path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z" fill="url(#heroGrad)" opacity=".7"/>
+            </svg>
+          </div>
+          <h3 id="heroTitle">Ask anything about your documents</h3>
+          <p id="heroSubtitle">Upload files on the left to build your knowledge base. I answer strictly from your content and show exactly which passages I used.</p>
+          <div class="suggestions" id="suggestions"></div>
+        </div>
+      </div>
+
+      <form class="composer" id="composer">
+        <div class="composer-inner">
+          <textarea id="questionInput" rows="1" placeholder="Ask a question about your documents…" autofocus></textarea>
+          <button type="submit" id="sendBtn" class="btn-send" aria-label="Send question" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>
+            </svg>
+          </button>
+        </div>
+        <p class="composer-hint">Press Enter to send · Shift+Enter for a new line</p>
+      </form>
+    </main>
+  </div>
+
+  <div class="toast-stack" id="toasts"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
